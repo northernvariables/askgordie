@@ -188,8 +188,12 @@ class GordieApp:
             result = self.vad.process(frames)
             if result.is_complete:
                 self.metrics.mark("vad_end_of_speech")
+                # Stop capture during processing to prevent feedback loop
+                self.capture.stop()
                 self._set_state(State.TRANSCRIBING)
                 self._transcribe_and_respond(result.audio, is_follow_up=self._awaiting_follow_up)
+                # Resume capture after response
+                self.capture.start()
 
         elif self._state == State.FOLLOW_UP:
             # This state is transient — _offer_follow_up speaks the prompt
