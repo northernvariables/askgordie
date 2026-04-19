@@ -23,6 +23,9 @@ def create_tts_provider(settings: Settings) -> TTSProvider:
     elif provider == "piper":
         from gordie_voice.tts.piper import PiperTTS
         return PiperTTS(settings)
+    elif provider == "google_cloud":
+        from gordie_voice.tts.google_cloud import GoogleCloudTTS
+        return GoogleCloudTTS(settings)
     elif provider == "espeak":
         from gordie_voice.tts.espeak import ESpeakTTS
         return ESpeakTTS()

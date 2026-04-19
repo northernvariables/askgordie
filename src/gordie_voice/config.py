@@ -35,7 +35,7 @@ class STTConfig(BaseModel):
 
 
 class TTSConfig(BaseModel):
-    provider: Literal["elevenlabs", "piper", "espeak"] = "elevenlabs"
+    provider: Literal["elevenlabs", "piper", "google_cloud", "espeak"] = "elevenlabs"
     model: str = "en_US-lessac-medium"  # Piper voice model name
     streaming: bool = True
     chunk_strategy: Literal["sentence", "paragraph"] = "sentence"
