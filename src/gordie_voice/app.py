@@ -127,8 +127,16 @@ class GordieApp:
 
         self.capture.start()
 
+        # Discard first 2 seconds of audio to avoid false wake triggers from mic init noise
+        import time as _time
+        _startup_discard_until = _time.monotonic() + 2.0
+
         try:
             while self._running:
+                if _time.monotonic() < _startup_discard_until:
+                    self.capture.read()  # Drain the buffer
+                    _time.sleep(0.01)
+                    continue
                 self._check_presence()
                 if self._mode == InteractionMode.VOICE:
                     self._voice_loop_tick()
