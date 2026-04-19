@@ -95,6 +95,7 @@ class Settings(BaseSettings):
     canadagpt_api_key: str = ""
     deepgram_api_key: str = ""
     openai_api_key: str = ""       # For Whisper API fallback STT
+    anthropic_api_key: str = ""    # For direct Anthropic API (bypass when CanadaGPT needs session auth)
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = ""
     supabase_url: str = ""

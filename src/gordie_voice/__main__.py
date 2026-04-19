@@ -39,7 +39,12 @@ def main() -> None:
     wake = create_wake_detector(settings)
     stt = create_stt_provider(settings)
     tts = create_tts_provider(settings)
-    client = CanadaGPTClient(settings)
+    # Use direct Anthropic if we have the key (bypasses CanadaGPT session auth)
+    if settings.anthropic_api_key:
+        from gordie_voice.canadagpt.direct_anthropic import DirectAnthropicClient
+        client = DirectAnthropicClient(settings)
+    else:
+        client = CanadaGPTClient(settings)
     shaper = ResponseShaper(settings.shaper)
 
     presence = PresenceDetector(settings.vision) if settings.vision.enabled else None
