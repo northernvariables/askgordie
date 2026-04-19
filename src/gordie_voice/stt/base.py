@@ -26,4 +26,7 @@ def create_stt_provider(settings: Settings) -> STTProvider:
     elif provider == "whisper_cpp":
         from gordie_voice.stt.whisper_cpp import WhisperCppSTT
         return WhisperCppSTT(settings)
+    elif provider == "faster_whisper":
+        from gordie_voice.stt.faster_whisper import FasterWhisperSTT
+        return FasterWhisperSTT(settings)
     raise ValueError(f"Unknown STT provider: {provider}")

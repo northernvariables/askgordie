@@ -29,7 +29,7 @@ class VADConfig(BaseModel):
 
 
 class STTConfig(BaseModel):
-    provider: Literal["deepgram", "whisper_api", "whisper_cpp"] = "deepgram"
+    provider: Literal["deepgram", "whisper_api", "whisper_cpp", "faster_whisper"] = "deepgram"
     model: str = "nova-3"
     streaming: bool = True
 
