@@ -65,6 +65,10 @@ class VADDetector:
         audio_float = frames.astype(np.float32) / 32768.0
         tensor = torch.from_numpy(audio_float).squeeze()
 
+        # Silero VAD needs at least 512 samples (32ms at 16kHz)
+        if tensor.numel() < 512:
+            return VADResult(is_complete=False)
+
         confidence = self._model(tensor, 16000).item()
         now = time.monotonic()
 
