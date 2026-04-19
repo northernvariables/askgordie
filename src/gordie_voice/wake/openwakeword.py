@@ -26,9 +26,10 @@ class OpenWakeWordDetector(WakeWordDetector):
         except Exception:
             log.warning("openwakeword_download_failed_using_cached")
         self.threshold = config.threshold
-        self._model = Model(
-            wakeword_models=config.model_path.split(",") if config.model_path else None,
-        )
+        model_kwargs = {}
+        if config.model_path:
+            model_kwargs["wakeword_models"] = config.model_path.split(",")
+        self._model = Model(**model_kwargs)
         log.info("openwakeword_loaded", threshold=self.threshold)
 
     def detect(self, frames: np.ndarray) -> bool:
