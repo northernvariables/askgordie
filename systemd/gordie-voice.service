@@ -1,0 +1,26 @@
+[Unit]
+Description=Gordie Voice - CanadaGPT Voice Appliance
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gordie
+Group=gordie
+WorkingDirectory=/opt/gordie-voice
+EnvironmentFile=/opt/gordie-voice/.env
+ExecStart=/opt/gordie-voice/venv/bin/python -m gordie_voice
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Allow access to audio and video devices
+SupplementaryGroups=audio video input
+
+# Resource limits
+MemoryMax=2G
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target

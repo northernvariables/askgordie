@@ -1,0 +1,60 @@
+audio:
+  sample_rate: 16000
+  channels: 1
+  buffer_size_ms: 30
+  input_device: null   # null = system default
+  output_device: null
+
+wake:
+  provider: openwakeword   # openwakeword | coral
+  model_path: null         # null = bundled model
+  threshold: 0.5
+
+vad:
+  min_silence_ms: 700
+  max_utterance_s: 15
+  speech_pad_ms: 200
+
+stt:
+  provider: deepgram       # deepgram | whisper_api | whisper_cpp
+  model: nova-3
+  streaming: true
+
+tts:
+  provider: elevenlabs     # elevenlabs | piper | espeak
+  streaming: true
+  chunk_strategy: sentence
+
+canadagpt:
+  timeout_s: 30
+  retry_count: 1
+  streaming: true
+
+shaper:
+  max_response_words: 400
+  strip_citations: false
+  strip_urls: true
+
+recording:
+  max_duration_s: 30               # Default — short and punchy like Speaker's Corner
+  max_duration_registered_s: 60    # Registered users get longer
+  countdown_warning_s: 10          # Flash red in last N seconds
+  fact_check_enabled: true         # Gordie fact-checks your opinion after recording
+
+vision:
+  enabled: true
+  camera_index: 0
+  check_interval_s: 1.0
+  presence_timeout_s: 10.0
+  face_min_confidence: 0.5
+
+display:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8080
+  fullscreen: true
+  theme: canadian          # canadian | dark | light
+  dual_display: false      # enable two-display mode
+  primary_mode: voice      # what the primary display shows: voice | prompt
+  secondary_mode: prompt   # what the secondary display shows: voice | prompt
+  touch_enabled: true      # touch-friendly UI with larger targets, on-screen inputs

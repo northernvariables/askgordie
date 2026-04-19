@@ -1,0 +1,17 @@
+[project]
+name = "canadagpt-voice-testing-mcp"
+version = "0.1.0"
+description = "MCP server for Gordie Voice test harness"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0",
+    "httpx>=0.25",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+canadagpt-voice-testing = "canadagpt_voice_testing.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

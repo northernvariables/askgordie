@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Gordie — CanadaGPT</title>
+    <link rel="stylesheet" href="/static/css/persona.css">
+    {% if touch %}<link rel="stylesheet" href="/static/css/touch.css">{% endif %}
+</head>
+<body class="theme-{{ theme }}{% if touch %} touch{% endif %}" data-state="idle" data-mode="voice" data-lock-mode="{{ lock_mode }}">
+
+    <!-- Voice mode: Gordie's animated face -->
+    <div id="voice-view" class="view active">
+        <div id="gordie-container">
+            <!-- Tap target: tap Gordie's face to trigger wake (touch alternative) -->
+            <button id="tap-to-wake" aria-label="Tap to ask Gordie a question">
+                <!-- Ambient ring that pulses with state -->
+                <div id="ambient-ring"></div>
+
+                <!-- The face -->
+                <div id="gordie-face">
+                    <div id="eyes">
+                        <div class="eye left">
+                            <div class="pupil"></div>
+                            <div class="eyelid"></div>
+                        </div>
+                        <div class="eye right">
+                            <div class="pupil"></div>
+                            <div class="eyelid"></div>
+                        </div>
+                    </div>
+                    <div id="mouth">
+                        <div class="mouth-shape"></div>
+                    </div>
+                    <div id="thinking-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </button>
+
+            <!-- Waveform visualization (visible when listening) -->
+            <canvas id="waveform" width="300" height="60"></canvas>
+
+            <!-- State label -->
+            <div id="state-label">Ready</div>
+
+            <!-- Touch hint (fades after first interaction) -->
+            <div id="touch-hint" class="touch-only">Tap Gordie to start listening</div>
+        </div>
+
+        <!-- Branding -->
+        <div id="branding">
+            <span class="brand-name">Gordie</span>
+            <span class="brand-sub">powered by CanadaGPT</span>
+        </div>
+    </div>
+
+    <!-- Prompt mode: text input + response display -->
+    <div id="prompt-view" class="view">
+        <div id="prompt-header">
+            <button id="prompt-gordie-tap" class="gordie-mini" aria-label="Gordie">
+                <div class="mini-eye left"></div>
+                <div class="mini-eye right"></div>
+            </button>
+            <h1>Ask Gordie</h1>
+        </div>
+
+        <div id="response-area"></div>
+
+        <!-- Quick suggestion chips (touch-friendly) -->
+        <div id="suggestion-chips" class="touch-only">
+            <button class="chip" data-query="Who is the Prime Minister of Canada?">Who is the PM?</button>
+            <button class="chip" data-query="What bills are currently before Parliament?">Current bills</button>
+            <button class="chip" data-query="Who is my member of parliament?">My MP</button>
+        </div>
+
+        <form id="prompt-form">
+            <input type="text" id="prompt-input" placeholder="Ask anything about Canadian government..."
+                   autocomplete="off" autofocus enterkeyhint="send">
+            <button type="submit" id="prompt-send" aria-label="Send">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </form>
+
+        <!-- Queue display -->
+        <div id="queue-display" class="hidden">
+            <div id="queue-now-serving">
+                <span class="queue-label">Now Serving</span>
+                <span id="queue-current-number" class="queue-number">--</span>
+                <span id="queue-current-name" class="queue-name"></span>
+            </div>
+            <div id="queue-waiting">
+                <span class="queue-waiting-label"><span id="queue-waiting-count">0</span> waiting</span>
+                <div id="queue-waiting-list"></div>
+            </div>
+            <div id="queue-qr">
+                <img src="/qr/queue" alt="Scan to join queue" width="100" height="100">
+                <span class="queue-qr-label">Scan to join</span>
+            </div>
+        </div>
+
+        <!-- QR Code registration + device info -->
+        <div id="qr-panel">
+            <img id="qr-code" src="/qr/register" alt="Scan to register with CanadaGPT" width="140" height="140">
+            <div id="qr-info">
+                <p class="qr-cta">Scan to join CanadaGPT</p>
+                <p id="qr-riding" class="qr-riding"></p>
+            </div>
+        </div>
+
+        <!-- Payment panel — shows based on admin config -->
+        <div id="payment-panel" class="hidden">
+            <!-- Recording fee gate (shown before opinion recording when fee is enabled) -->
+            <div id="pay-recording-fee" class="pay-section hidden">
+                <button id="pay-record-btn" class="pay-btn">
+                    <span class="pay-amount" id="recording-fee-amount"></span>
+                    <span class="pay-label">to record your opinion</span>
+                </button>
+            </div>
+
+            <!-- Donation -->
+            <div id="pay-donation" class="pay-section hidden">
+                <p class="pay-section-title">Make a Donation</p>
+                <p id="donation-recipient" class="pay-recipient"></p>
+                <div id="donation-presets"></div>
+                <div id="donation-custom" class="hidden">
+                    <input type="number" id="donation-amount-input" min="1" max="500"
+                           placeholder="Custom amount ($)" inputmode="decimal">
+                    <button id="donation-custom-btn" class="pay-btn-sm">Donate</button>
+                </div>
+            </div>
+
+            <!-- Commerce catalog -->
+            <div id="pay-commerce" class="pay-section hidden">
+                <p class="pay-section-title">Shop</p>
+                <div id="commerce-catalog"></div>
+            </div>
+
+            <!-- Payment status overlay -->
+            <div id="payment-status" class="hidden">
+                <div id="payment-status-icon"></div>
+                <p id="payment-status-msg">Tap or insert your card on the reader</p>
+                <button id="payment-cancel-btn" class="opinion-btn-secondary">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Record Your Opinion button -->
+        <button id="record-opinion-btn" class="record-opinion-trigger">
+            <span class="rec-icon">&#9679;</span> Record Your Opinion
+        </button>
+
+        <!-- Registration panel with on-screen numpad -->
+        <div id="registration-panel" class="hidden">
+            <p>Register with your phone number to get started</p>
+
+            <div id="reg-phone-step">
+                <div class="reg-input-row">
+                    <input type="tel" id="reg-phone" placeholder="+1 (___) ___-____" readonly class="touch-only">
+                    <input type="tel" id="reg-phone-kb" placeholder="+1 (___) ___-____" class="kb-only">
+                    <button id="reg-send-code">Send Code</button>
+                </div>
+                <div id="numpad-phone" class="numpad touch-only">
+                    <button class="numpad-key" data-key="1">1</button>
+                    <button class="numpad-key" data-key="2">2<span>ABC</span></button>
+                    <button class="numpad-key" data-key="3">3<span>DEF</span></button>
+                    <button class="numpad-key" data-key="4">4<span>GHI</span></button>
+                    <button class="numpad-key" data-key="5">5<span>JKL</span></button>
+                    <button class="numpad-key" data-key="6">6<span>MNO</span></button>
+                    <button class="numpad-key" data-key="7">7<span>PQRS</span></button>
+                    <button class="numpad-key" data-key="8">8<span>TUV</span></button>
+                    <button class="numpad-key" data-key="9">9<span>WXYZ</span></button>
+                    <button class="numpad-key numpad-clear" data-key="clear">C</button>
+                    <button class="numpad-key" data-key="0">0</button>
+                    <button class="numpad-key numpad-back" data-key="back">&#9003;</button>
+                </div>
+            </div>
+
+            <div id="reg-code-step" class="hidden">
+                <p class="reg-code-label">Enter the 6-digit code sent to your phone</p>
+                <div id="code-boxes">
+                    <input type="text" maxlength="1" class="code-digit" data-index="0" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" maxlength="1" class="code-digit" data-index="1" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" maxlength="1" class="code-digit" data-index="2" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" maxlength="1" class="code-digit" data-index="3" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" maxlength="1" class="code-digit" data-index="4" inputmode="numeric" pattern="[0-9]">
+                    <input type="text" maxlength="1" class="code-digit" data-index="5" inputmode="numeric" pattern="[0-9]">
+                </div>
+                <div id="numpad-code" class="numpad touch-only">
+                    <button class="numpad-key" data-key="1">1</button>
+                    <button class="numpad-key" data-key="2">2</button>
+                    <button class="numpad-key" data-key="3">3</button>
+                    <button class="numpad-key" data-key="4">4</button>
+                    <button class="numpad-key" data-key="5">5</button>
+                    <button class="numpad-key" data-key="6">6</button>
+                    <button class="numpad-key" data-key="7">7</button>
+                    <button class="numpad-key" data-key="8">8</button>
+                    <button class="numpad-key" data-key="9">9</button>
+                    <button class="numpad-key numpad-clear" data-key="clear">C</button>
+                    <button class="numpad-key" data-key="0">0</button>
+                    <button class="numpad-key numpad-back" data-key="back">&#9003;</button>
+                </div>
+                <button id="reg-verify">Verify</button>
+            </div>
+
+            <div id="reg-status"></div>
+        </div>
+    </div>
+
+    <!-- Opinion Recording Overlay -->
+    <div id="opinion-overlay" class="overlay hidden">
+        <!-- Step 0: Mode selection -->
+        <div id="opinion-mode-select" class="opinion-step">
+            <h2>What would you like to do?</h2>
+            <div class="mode-buttons">
+                <button id="mode-opinion-btn" class="mode-card">
+                    <span class="mode-icon">🎙️</span>
+                    <span class="mode-label">Share Your Opinion</span>
+                    <span class="mode-desc">Pick a topic and record your thoughts</span>
+                </button>
+                <button id="mode-challenge-btn" class="mode-card mode-card-accent">
+                    <span class="mode-icon">🧠</span>
+                    <span class="mode-label">Gordie Challenge</span>
+                    <span class="mode-desc">Gordie asks a question — you answer — get fact-checked</span>
+                </button>
+            </div>
+            <button id="mode-cancel-btn" class="opinion-btn-secondary">Cancel</button>
+        </div>
+
+        <!-- Step 1a: Category selection (opinion mode) -->
+        <div id="opinion-categories" class="opinion-step hidden">
+            <h2>What would you like to share your opinion on?</h2>
+            <div id="category-grid"></div>
+            <button id="opinion-cancel-btn" class="opinion-btn-secondary">Back</button>
+        </div>
+
+        <!-- Step 1b: Category selection (challenge mode) -->
+        <div id="challenge-categories" class="opinion-step hidden">
+            <h2>Pick a topic for the Gordie Challenge</h2>
+            <div id="challenge-category-grid"></div>
+            <button id="challenge-cancel-btn" class="opinion-btn-secondary">Back</button>
+        </div>
+
+        <!-- Step 1c: Challenge question display -->
+        <div id="challenge-question-step" class="opinion-step hidden">
+            <p class="challenge-label">Gordie asks:</p>
+            <h2 id="challenge-question-text"></h2>
+            <p class="challenge-hint">You'll have 30 seconds to answer. Gordie will fact-check your response.</p>
+            <div id="challenge-controls">
+                <button id="challenge-ready-btn" class="opinion-btn-primary">I'm Ready — Start Recording</button>
+                <button id="challenge-back-btn" class="opinion-btn-secondary">Different Question</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Preview + countdown recording -->
+        <div id="opinion-recording" class="opinion-step hidden">
+            <div id="opinion-prompt-text"></div>
+            <div id="camera-container">
+                <img id="camera-feed" src="" alt="Camera preview">
+                <div id="rec-indicator" class="hidden">
+                    <span class="rec-dot"></span> REC
+                </div>
+                <div id="countdown-display">
+                    <span id="countdown-time">1:00</span>
+                </div>
+                <div id="countdown-bar">
+                    <div id="countdown-bar-fill"></div>
+                </div>
+            </div>
+            <div id="consent-notice">
+                <p>By pressing record, you consent to your video being submitted to
+                CanadaGPT for review and potential publication.</p>
+            </div>
+            <div id="opinion-controls">
+                <button id="opinion-start-btn" class="opinion-btn-primary">I Consent &mdash; Start Recording</button>
+                <button id="opinion-stop-btn" class="opinion-btn-danger hidden">Stop Recording</button>
+                <button id="opinion-back-btn" class="opinion-btn-secondary">Back</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Fact-check results -->
+        <div id="opinion-fact-check" class="opinion-step hidden">
+            <div id="fc-header">
+                <h2>Gordie's Fact Check</h2>
+                <p id="fc-status-text">Transcribing your recording...</p>
+            </div>
+
+            <!-- Transcript preview -->
+            <div id="fc-transcript" class="hidden">
+                <p class="fc-section-label">What you said:</p>
+                <blockquote id="fc-transcript-text"></blockquote>
+            </div>
+
+            <!-- Claims list (populated one by one) -->
+            <div id="fc-claims"></div>
+
+            <!-- Final verdict -->
+            <div id="fc-verdict" class="hidden">
+                <div id="fc-verdict-emoji"></div>
+                <div id="fc-verdict-meter">
+                    <div id="fc-meter-fill"></div>
+                    <div id="fc-meter-labels">
+                        <span>Baloney</span>
+                        <span>Brilliance</span>
+                    </div>
+                </div>
+                <div id="fc-verdict-score"></div>
+                <div id="fc-verdict-label"></div>
+                <p id="fc-summary"></p>
+            </div>
+
+            <button id="fc-done-btn" class="opinion-btn-primary hidden">Done</button>
+        </div>
+
+        <!-- Step 4: Done (no fact-check) -->
+        <div id="opinion-done" class="opinion-step hidden">
+            <div class="opinion-done-icon">&#10003;</div>
+            <h2>Thank you for sharing your opinion!</h2>
+            <p>Your recording has been saved.</p>
+            <button id="opinion-done-btn" class="opinion-btn-primary">Done</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        window.GORDIE_LOCK_MODE = "{{ lock_mode }}";
+        window.GORDIE_TOUCH = {{ "true" if touch else "false" }};
+    </script>
+    <script src="/static/js/persona.js"></script>
+</body>
+</html>

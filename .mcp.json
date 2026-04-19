@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "gordie-voice-ops": {
+      "command": "uv",
+      "args": ["run", "--directory", "mcp/gordie-voice-ops", "gordie-voice-ops"],
+      "env": {
+        "GORDIE_ROOT": "/opt/gordie-voice"
+      }
+    },
+    "canadagpt-voice-testing": {
+      "command": "uv",
+      "args": ["run", "--directory", "mcp/canadagpt-voice-testing", "canadagpt-voice-testing"]
+    }
+  }
+}

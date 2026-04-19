@@ -1,0 +1,17 @@
+[Unit]
+Description=Gordie Secondary Display - Chromium kiosk for prompt UI
+After=gordie-voice.service graphical.target
+Wants=gordie-voice.service
+
+[Service]
+Type=simple
+User=gordie
+Group=gordie
+Environment=DISPLAY=:0
+ExecStartPre=/bin/sleep 4
+ExecStart=/usr/bin/chromium-browser --kiosk --noerrdialogs --disable-translate --no-first-run --fast --fast-start --disable-features=TranslateUI --touch-events=enabled --disable-pinch --overscroll-history-navigation=disabled --disk-cache-dir=/dev/null --window-position=1920,0 http://127.0.0.1:8080/secondary
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

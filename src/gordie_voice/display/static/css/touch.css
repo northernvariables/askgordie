@@ -1,0 +1,249 @@
+/* Touch-specific styles — loaded only when touch_enabled=true */
+
+/* Prevent text selection and callout menus on touch */
+body.touch {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    cursor: default;
+}
+
+body.touch #prompt-input,
+body.touch .code-digit,
+body.touch #response-area {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* Hide keyboard-only elements, show touch-only elements */
+.touch-only { display: none; }
+body.touch .touch-only { display: flex; }
+body.touch .kb-only { display: none; }
+
+/* ---- Tap-to-wake on voice view ---- */
+#tap-to-wake {
+    background: none;
+    border: none;
+    padding: 0;
+    position: relative;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body.touch #tap-to-wake:active #gordie-face {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+}
+
+/* Touch hint */
+#touch-hint {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-top: 1rem;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+#touch-hint.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ---- Larger tap targets ---- */
+body.touch #prompt-input {
+    padding: 1rem 1.25rem;
+    font-size: 1.15rem;
+    min-height: 52px;
+}
+
+body.touch #prompt-send {
+    min-width: 56px;
+    min-height: 52px;
+    padding: 0.75rem 1.25rem;
+}
+
+body.touch #prompt-send svg {
+    width: 28px;
+    height: 28px;
+}
+
+/* ---- Suggestion chips ---- */
+#suggestion-chips {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    justify-content: center;
+}
+
+.chip {
+    padding: 0.6rem 1.2rem;
+    background: var(--face-bg);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    color: var(--text);
+    font-size: 0.95rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, border-color 0.15s;
+    min-height: 44px;
+}
+
+.chip:active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+/* ---- Numpad ---- */
+.numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-width: 320px;
+    margin: 1rem auto;
+}
+
+.numpad-key {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    min-height: 64px;
+    font-size: 1.5rem;
+    font-weight: 500;
+    background: var(--face-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: var(--text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+}
+
+.numpad-key:active {
+    background: var(--accent-soft);
+}
+
+.numpad-key span {
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+
+.numpad-clear {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.numpad-back {
+    font-size: 1.3rem;
+}
+
+/* ---- Phone input (touch: readonly, uses numpad) ---- */
+body.touch #reg-phone {
+    text-align: center;
+    font-size: 1.4rem;
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+    caret-color: transparent;
+}
+
+/* ---- Code digit boxes ---- */
+#code-boxes {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.code-digit {
+    width: 52px;
+    height: 64px;
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 600;
+    background: var(--face-bg);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    color: var(--text);
+    caret-color: var(--accent);
+    transition: border-color 0.2s;
+}
+
+.code-digit:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.code-digit.filled {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+/* In touch mode, hide the native input cursor since numpad drives input */
+body.touch .code-digit {
+    caret-color: transparent;
+}
+
+.reg-code-label {
+    text-align: center;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+}
+
+/* ---- Registration buttons (touch-friendly) ---- */
+body.touch #reg-send-code,
+body.touch #reg-verify {
+    min-height: 52px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 320px;
+    margin: 0.5rem auto;
+    display: block;
+}
+
+.reg-input-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+body.touch .reg-input-row input {
+    width: 100%;
+    max-width: 320px;
+}
+
+/* ---- Prompt gordie mini tap (switch to voice) ---- */
+#prompt-gordie-tap {
+    background: none;
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body.touch #prompt-gordie-tap {
+    min-width: 56px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---- Scrollable response area (touch scroll) ---- */
+body.touch #response-area {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* ---- Prevent zoom on input focus (iOS/mobile) ---- */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    body.touch input[type="text"],
+    body.touch input[type="tel"] {
+        font-size: 16px; /* Prevents iOS auto-zoom */
+    }
+}

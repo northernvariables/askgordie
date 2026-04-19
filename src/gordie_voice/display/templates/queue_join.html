@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Join the Queue — Gordie by CanadaGPT</title>
+    <style>
+        :root { --accent: #ff1e38; --bg: #0a0a0f; --card: #1a1a2e; --text: #e8e8e8; --dim: #888; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, sans-serif; min-height: 100vh; padding: 1.5rem; }
+        h1 { font-size: 1.5rem; text-align: center; margin-bottom: 0.25rem; }
+        .subtitle { text-align: center; color: var(--dim); font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .brand { color: var(--accent); }
+        .step { display: none; }
+        .step.active { display: block; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-size: 0.85rem; color: var(--dim); margin-bottom: 0.3rem; }
+        input { width: 100%; padding: 0.75rem; background: var(--card); border: 2px solid transparent; border-radius: 12px; color: var(--text); font-size: 1rem; }
+        input:focus { border-color: var(--accent); outline: none; }
+        .btn { width: 100%; padding: 0.85rem; background: var(--accent); border: none; border-radius: 12px; color: white; font-size: 1.05rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+        .info { text-align: center; color: var(--dim); font-size: 0.85rem; margin-top: 1rem; line-height: 1.5; }
+        .ticket { text-align: center; margin: 2rem 0; }
+        .ticket-number { font-size: 4rem; font-weight: 700; color: var(--accent); }
+        .ticket-label { font-size: 0.9rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; }
+        .wait-info { text-align: center; margin-top: 1rem; }
+        .wait-info span { font-weight: 600; color: var(--text); }
+        .riding-badge { display: inline-block; padding: 0.3rem 0.8rem; background: var(--card); border-radius: 8px; font-size: 0.85rem; color: var(--dim); margin-top: 0.5rem; }
+        .error { color: var(--accent); font-size: 0.85rem; margin-top: 0.5rem; }
+        .reg-note { text-align: center; padding: 1rem; background: var(--card); border-radius: 12px; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.5; }
+        .your-turn { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
+    </style>
+</head>
+<body>
+    <h1><span class="brand">Gordie</span></h1>
+    <p class="subtitle">powered by CanadaGPT</p>
+
+    <!-- Step 1: Registration required -->
+    <div id="step-register" class="step active">
+        <div class="reg-note">
+            To join the queue, please register with CanadaGPT first. This only takes a moment.
+        </div>
+        <div class="form-group">
+            <label for="reg-name">Your Name</label>
+            <input type="text" id="reg-name" placeholder="First name" autocomplete="given-name">
+        </div>
+        <div class="form-group">
+            <label for="reg-postal">Postal Code</label>
+            <input type="text" id="reg-postal" placeholder="K1A 0A6" maxlength="7" autocomplete="postal-code">
+        </div>
+        <div class="form-group">
+            <label for="reg-phone-input">Phone Number</label>
+            <input type="tel" id="reg-phone-input" placeholder="+1 (___) ___-____" autocomplete="tel">
+        </div>
+        <button class="btn" id="btn-send-code">Register &amp; Join Queue</button>
+        <div id="reg-error" class="error"></div>
+        <p class="info">We'll text you a code to verify your number, then add you to the queue.</p>
+    </div>
+
+    <!-- Step 2: Verify OTP -->
+    <div id="step-verify" class="step">
+        <p style="text-align:center; margin-bottom:1rem;">Enter the 6-digit code sent to your phone</p>
+        <div class="form-group">
+            <input type="text" id="verify-code" placeholder="______" maxlength="6" inputmode="numeric"
+                   style="text-align:center; font-size:1.5rem; letter-spacing:0.5em;">
+        </div>
+        <button class="btn" id="btn-verify">Verify &amp; Join Queue</button>
+        <div id="verify-error" class="error"></div>
+    </div>
+
+    <!-- Step 3: Ticket confirmation -->
+    <div id="step-ticket" class="step">
+        <div class="ticket">
+            <div class="ticket-label" id="ticket-label">Your Number</div>
+            <div class="ticket-number" id="my-ticket">#--</div>
+        </div>
+        <div class="wait-info">
+            <p><span id="wait-position">0</span> people ahead of you</p>
+            <p>Estimated wait: <span id="wait-time">0</span> minutes</p>
+        </div>
+        <div id="my-riding" style="text-align:center; margin-top:0.5rem;"></div>
+        <p class="info">Watch the Gordie screen for your number. We'll also text you when it's your turn.</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const deviceId = new URLSearchParams(window.location.search).get('device') || '';
+
+        let regName = '', regPostal = '', regPhone = '';
+
+        document.getElementById('btn-send-code').addEventListener('click', () => {
+            regName = document.getElementById('reg-name').value.trim();
+            regPostal = document.getElementById('reg-postal').value.trim();
+            regPhone = document.getElementById('reg-phone-input').value.trim();
+
+            const errEl = document.getElementById('reg-error');
+            if (!regName) { errEl.textContent = 'Please enter your name'; return; }
+            if (!regPostal) { errEl.textContent = 'Please enter your postal code'; return; }
+            if (!regPhone) { errEl.textContent = 'Please enter your phone number'; return; }
+
+            errEl.textContent = '';
+            socket.emit('register_phone', { phone: regPhone });
+        });
+
+        socket.on('registration_status', (data) => {
+            if (data.step === 'otp_sent') {
+                if (data.success) {
+                    document.getElementById('step-register').classList.remove('active');
+                    document.getElementById('step-verify').classList.add('active');
+                } else {
+                    document.getElementById('reg-error').textContent = 'Failed to send code. Check your number.';
+                }
+            } else if (data.step === 'verified') {
+                if (data.success) {
+                    socket.emit('queue_join', {
+                        display_name: regName,
+                        postal_code: regPostal,
+                        phone: regPhone,
+                        device_id: deviceId,
+                    });
+                } else {
+                    document.getElementById('verify-error').textContent = 'Invalid code. Try again.';
+                }
+            }
+        });
+
+        document.getElementById('btn-verify').addEventListener('click', () => {
+            const code = document.getElementById('verify-code').value.trim();
+            if (code.length !== 6) { document.getElementById('verify-error').textContent = 'Enter all 6 digits'; return; }
+            document.getElementById('verify-error').textContent = '';
+            socket.emit('verify_code', { phone: regPhone, code: code });
+        });
+
+        socket.on('queue_joined', (data) => {
+            document.getElementById('step-verify').classList.remove('active');
+            document.getElementById('step-register').classList.remove('active');
+            document.getElementById('step-ticket').classList.add('active');
+            document.getElementById('my-ticket').textContent = '#' + data.ticket_number;
+            document.getElementById('wait-position').textContent = data.position;
+            document.getElementById('wait-time').textContent = data.estimated_wait_minutes;
+            if (data.riding_name) {
+                const ridingEl = document.getElementById('my-riding');
+                const badge = document.createElement('span');
+                badge.className = 'riding-badge';
+                badge.textContent = 'Riding: ' + data.riding_name;
+                ridingEl.textContent = '';
+                ridingEl.appendChild(badge);
+            }
+        });
+
+        socket.on('queue_update', (data) => {
+            if (data.now_serving) {
+                const myTicket = document.getElementById('my-ticket').textContent;
+                if (myTicket === '#' + data.now_serving) {
+                    document.getElementById('ticket-label').textContent = "IT'S YOUR TURN!";
+                    document.getElementById('my-ticket').classList.add('your-turn');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
