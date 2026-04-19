@@ -48,6 +48,7 @@ class VADDetector:
         self._speech_detected = False
         self._start_time = time.monotonic()
         self._last_speech_time = self._start_time  # Prevent immediate silence trigger
+        self._vad_buffer = np.array([], dtype=np.float32)
         if self._model:
             self._model.reset_states()
 
@@ -65,11 +66,19 @@ class VADDetector:
         audio_float = frames.astype(np.float32) / 32768.0
         tensor = torch.from_numpy(audio_float).squeeze()
 
-        # Silero VAD needs at least 512 samples (32ms at 16kHz)
-        if tensor.numel() < 512:
-            return VADResult(is_complete=False)
+        # Silero VAD requires exactly 512 samples at 16kHz
+        # Buffer and process in 512-sample chunks
+        if not hasattr(self, '_vad_buffer'):
+            self._vad_buffer = np.array([], dtype=np.float32)
 
-        confidence = self._model(tensor, 16000).item()
+        self._vad_buffer = np.concatenate([self._vad_buffer, audio_float.flatten()])
+        confidence = 0.0
+
+        while len(self._vad_buffer) >= 512:
+            chunk = self._vad_buffer[:512]
+            self._vad_buffer = self._vad_buffer[512:]
+            chunk_tensor = torch.from_numpy(chunk)
+            confidence = max(confidence, self._model(chunk_tensor, 16000).item())
         now = time.monotonic()
 
         if confidence > 0.5:
