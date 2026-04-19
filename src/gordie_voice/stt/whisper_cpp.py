@@ -19,8 +19,13 @@ class WhisperCppSTT(STTProvider):
     def __init__(self, settings: Settings) -> None:
         from whispercpp import Whisper
 
-        model_path = settings.stt.model or "ggml-small.en-q5_1.bin"
-        self._model = Whisper.from_pretrained(model_path)
+        model_path = settings.stt.model or "small.en"
+
+        # If it's a file path, use from_params; if it's a model name, use from_pretrained
+        if "/" in model_path or model_path.endswith(".bin"):
+            self._model = Whisper(model_path)
+        else:
+            self._model = Whisper.from_pretrained(model_path)
         log.info("whisper_cpp_loaded", model=model_path)
 
     def transcribe(self, audio: bytes) -> str:
