@@ -23,6 +23,7 @@ dependencies = [
     "qrcode[pil]>=7.4",
     "squareup>=38.0",
     "google-cloud-texttospeech>=2.14",
+    "google-auth>=2.0",
 ]
 
 [project.optional-dependencies]
