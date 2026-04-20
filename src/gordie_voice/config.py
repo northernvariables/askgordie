@@ -35,7 +35,7 @@ class STTConfig(BaseModel):
 
 
 class TTSConfig(BaseModel):
-    provider: Literal["elevenlabs", "piper", "google_cloud", "espeak"] = "elevenlabs"
+    provider: Literal["elevenlabs", "piper", "google_cloud", "resemble", "espeak"] = "elevenlabs"
     model: str = "en_US-lessac-medium"  # Piper voice model name
     streaming: bool = True
     chunk_strategy: Literal["sentence", "paragraph"] = "sentence"
@@ -96,6 +96,7 @@ class Settings(BaseSettings):
     deepgram_api_key: str = ""
     openai_api_key: str = ""       # For Whisper API fallback STT
     anthropic_api_key: str = ""    # For direct Anthropic API (bypass when CanadaGPT needs session auth)
+    resemble_api_key: str = ""     # For Resemble AI voice cloning TTS
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = ""
     supabase_url: str = ""

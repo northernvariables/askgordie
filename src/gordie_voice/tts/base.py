@@ -26,6 +26,9 @@ def create_tts_provider(settings: Settings) -> TTSProvider:
     elif provider == "google_cloud":
         from gordie_voice.tts.google_cloud import GoogleCloudTTS
         return GoogleCloudTTS(settings)
+    elif provider == "resemble":
+        from gordie_voice.tts.resemble import ResembleAITTS
+        return ResembleAITTS(settings)
     elif provider == "espeak":
         from gordie_voice.tts.espeak import ESpeakTTS
         return ESpeakTTS()

@@ -30,7 +30,8 @@ class HistoricalPersona:
     portrait_thinking: list[str] = field(default_factory=list)
 
     # Voice
-    voice_name: str = "Alnilam"  # Google Chirp3 HD voice
+    voice_name: str = "Alnilam"  # Google Chirp3 HD voice (fallback)
+    resemble_voice_uuid: str = ""  # Resemble AI cloned voice UUID (preferred if set)
     speaking_rate: float = 0.95  # Slightly slower for gravitas
 
     # Prompt components
