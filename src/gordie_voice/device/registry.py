@@ -50,6 +50,7 @@ class DeviceRegistry:
         self._device_record: dict | None = None
         self._running = False
         self._thread: threading.Thread | None = None
+        self._on_persona_change = None  # Callback: (slug: str) -> None
 
         self._client = httpx.Client(
             headers={
@@ -88,6 +89,10 @@ class DeviceRegistry:
         if self._device_record:
             return self._device_record.get("config_override", {})
         return {}
+
+    def on_persona_change(self, callback) -> None:
+        """Register a callback for when the admin pushes a persona change."""
+        self._on_persona_change = callback
 
     def start(self) -> None:
         """Start the device registry lifecycle."""
@@ -240,7 +245,14 @@ class DeviceRegistry:
         local_version = record.get("device_config_version", 0)
 
         if remote_version > local_version:
-            log.info("config_update_available", remote=remote_version, local=local_version)
+            overrides = record.get("config_override", {})
+            log.info("config_update_available", remote=remote_version, local=local_version, overrides=overrides)
+
+            # Apply persona change if present
+            new_persona = overrides.get("active_persona")
+            if new_persona and self._on_persona_change:
+                self._on_persona_change(new_persona)
+
             # Acknowledge the config
             try:
                 url = f"{self._supabase_url}/rest/v1/devices?device_id=eq.{self._device_id}"

@@ -77,6 +77,20 @@ def main() -> None:
     device_registry = DeviceRegistry(settings)
     device_registry.start()
 
+    # Register persona change callback — admin can push persona changes via device registry
+    def _handle_persona_change(slug: str) -> None:
+        if persona_mgr.switch_persona(slug):
+            new_prompt = persona_mgr.build_system_prompt()
+            if hasattr(client, 'set_system_prompt'):
+                client.set_system_prompt(new_prompt)
+                client.new_conversation()
+            if persona:
+                persona.set_persona_manager(persona_mgr)
+                persona.socketio.emit("persona_info", persona_mgr.get_display_info())
+            log.info("persona_changed_remotely", slug=slug, name=persona_mgr.name)
+
+    device_registry.on_persona_change(_handle_persona_change)
+
     if not device_registry.is_activated:
         log.info(
             "device_pending_activation",
