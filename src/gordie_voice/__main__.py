@@ -39,10 +39,16 @@ def main() -> None:
     wake = create_wake_detector(settings)
     stt = create_stt_provider(settings)
     tts = create_tts_provider(settings)
+    # Persona manager — loads the historical figure for this device
+    from gordie_voice.personas.manager import PersonaManager
+    persona_mgr = PersonaManager(settings)
+    log.info("persona_active", name=persona_mgr.name, slug=persona_mgr.slug)
+
     # Use direct Anthropic if we have the key (bypasses CanadaGPT session auth)
     if settings.anthropic_api_key:
         from gordie_voice.canadagpt.direct_anthropic import DirectAnthropicClient
-        client = DirectAnthropicClient(settings)
+        system_prompt = persona_mgr.build_system_prompt()
+        client = DirectAnthropicClient(settings, system_prompt=system_prompt)
     else:
         client = CanadaGPTClient(settings)
     shaper = ResponseShaper(settings.shaper)
@@ -124,6 +130,7 @@ def main() -> None:
     if persona:
         persona.set_app(app)
         persona.set_device_registry(device_registry)
+        persona.set_persona_manager(persona_mgr)
 
     app.run()
 

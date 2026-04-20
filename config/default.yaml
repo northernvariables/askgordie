@@ -41,6 +41,9 @@ recording:
   countdown_warning_s: 10          # Flash red in last N seconds
   fact_check_enabled: true         # Gordie fact-checks your opinion after recording
 
+persona:
+  active: laurier                  # laurier | pearson | douglas | diefenbaker
+
 vision:
   enabled: true
   camera_index: 0

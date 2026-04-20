@@ -102,6 +102,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""  # For server-side uploads (never expose to client)
     gordie_device_id: str = "gordie-001"
+    active_persona: str = "laurier"  # laurier | pearson | douglas | diefenbaker
     gordie_wake_word: str = "hey_gordie"
     gordie_log_level: str = "INFO"
 

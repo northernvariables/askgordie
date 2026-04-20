@@ -61,6 +61,7 @@ class PersonaServer:
         self._payments: PaymentManager | None = None
         self._fact_checker: FactChecker | None = None
         self._queue: QueueManager | None = None
+        self._persona_mgr = None  # PersonaManager
         self._stt: object | None = None  # STTProvider for transcribing recordings
 
         self.flask = Flask(
@@ -88,6 +89,9 @@ class PersonaServer:
 
     def set_payments(self, payments: PaymentManager) -> None:
         self._payments = payments
+
+    def set_persona_manager(self, mgr) -> None:
+        self._persona_mgr = mgr
 
     def set_queue(self, queue: QueueManager) -> None:
         self._queue = queue
@@ -210,6 +214,10 @@ class PersonaServer:
                     "mode": self._app_ref.mode.value,
                     "dual_display": self.config.dual_display,
                 })
+            # Send persona info for portrait display
+            if self._persona_mgr:
+                self.socketio.emit("persona_info", self._persona_mgr.get_display_info())
+
             # Send payment config
             if self._payments and self._payments.config:
                 pc = self._payments.config

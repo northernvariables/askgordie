@@ -41,13 +41,14 @@ You are running on a Raspberry Pi 5 appliance called a "Gordie" — a physical k
 
 
 class DirectAnthropicClient:
-    """Calls the Anthropic API directly with the Gordie system prompt."""
+    """Calls the Anthropic API directly with persona-aware system prompt."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, system_prompt: str | None = None) -> None:
         self._api_key = settings.anthropic_api_key
         self._model = "claude-sonnet-4-20250514"
         self._timeout = settings.canadagpt.timeout_s
         self._retry_count = settings.canadagpt.retry_count
+        self._system_prompt = system_prompt or GORDIE_SYSTEM_PROMPT
         self._messages: list[dict] = []  # Conversation history
         self._client = httpx.Client(
             timeout=self._timeout,
@@ -58,6 +59,10 @@ class DirectAnthropicClient:
             },
         )
         log.info("direct_anthropic_ready", model=self._model)
+
+    def set_system_prompt(self, prompt: str) -> None:
+        """Update the system prompt (e.g., when persona changes or Hansard context is loaded)."""
+        self._system_prompt = prompt
 
     def new_conversation(self) -> None:
         self._messages.clear()
@@ -75,7 +80,7 @@ class DirectAnthropicClient:
         payload = {
             "model": self._model,
             "max_tokens": 1024,
-            "system": GORDIE_SYSTEM_PROMPT,
+            "system": self._system_prompt,
             "messages": messages,
             "stream": True,
         }
