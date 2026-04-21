@@ -11,3 +11,5 @@ venv/
 *.bin
 .ruff_cache/
 .pytest_cache/
+voice_sources/
+voice_previews/
