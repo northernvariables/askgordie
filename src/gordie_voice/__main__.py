@@ -107,6 +107,12 @@ def main() -> None:
 
     device_registry.on_persona_change(_handle_persona_change)
 
+    # Session storage
+    from gordie_voice.sessions.store import SessionStore
+    import os
+    os.makedirs("/opt/gordie-voice/data", exist_ok=True)
+    session_store = SessionStore()
+
     if not device_registry.is_activated:
         log.info(
             "device_pending_activation",
@@ -130,7 +136,19 @@ def main() -> None:
         presence=presence,
         persona=persona,
         registration=registration,
+        session_store=session_store,
     )
+
+    # Session sync to Supabase
+    if settings.supabase_url and settings.supabase_service_role_key:
+        from gordie_voice.sessions.sync import SessionSync
+        session_sync = SessionSync(session_store, settings.supabase_url, settings.supabase_service_role_key)
+        session_sync.start()
+
+    # Session cleanup
+    from gordie_voice.sessions.cleanup import SessionCleanup
+    session_cleanup = SessionCleanup(session_store)
+    session_cleanup.start()
 
     # Payment manager — loads per-device config from Supabase
     payment_manager = None
@@ -162,6 +180,7 @@ def main() -> None:
         persona.set_device_registry(device_registry)
         if persona_mgr:
             persona.set_persona_manager(persona_mgr)
+        persona.set_session_store(session_store)
 
     app.run()
 

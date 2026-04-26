@@ -64,6 +64,7 @@ class GordieApp:
         presence: PresenceDetector | None = None,
         persona: PersonaServer | None = None,
         registration: RegistrationManager | None = None,
+        session_store=None,
     ) -> None:
         self.settings = settings
         self.capture = capture
@@ -78,6 +79,7 @@ class GordieApp:
         self.presence = presence
         self.persona = persona
         self.registration = registration
+        self.session_store = session_store
 
         self._state = State.IDLE
         self._mode = InteractionMode.VOICE
@@ -85,6 +87,7 @@ class GordieApp:
         self._barge_in = threading.Event()
         self._awaiting_follow_up = False  # True when LISTENING state is for follow-up intent
         self._pending_follow_up_query: str | None = None
+        self._session_id: str | None = None
 
     @property
     def state(self) -> State:
@@ -168,6 +171,7 @@ class GordieApp:
             self._set_mode(InteractionMode.VOICE)
         elif not face_present and self._mode == InteractionMode.VOICE:
             if self._state == State.IDLE:
+                self._end_current_session()
                 self._set_mode(InteractionMode.PROMPT)
 
     def _voice_loop_tick(self) -> None:
@@ -180,6 +184,8 @@ class GordieApp:
                 self.metrics.start_interaction()
                 self.metrics.mark("wake_detection")
                 self._barge_in.clear()
+                if self.session_store and not self._session_id:
+                    self._session_id = self.session_store.create_session(self.settings.device_id)
                 # Play listening chime so user knows they were heard
                 self.playback.play(listening_chime(), sample_rate=get_tone_sample_rate())
                 self.vad.reset()
@@ -247,6 +253,9 @@ class GordieApp:
             self.metrics.mark("stt_complete")
             log.info("transcription", text=transcript)
 
+            if self.session_store and self._session_id and transcript.strip():
+                self.session_store.add_message(self._session_id, "user", transcript)
+
             if not transcript.strip():
                 self.playback.stop()  # Stop thinking music
                 self._set_state(State.IDLE)
@@ -264,6 +273,7 @@ class GordieApp:
             if self.settings.canadagpt.streaming:
                 self._set_state(State.SPEAKING)
                 self.playback.stop()  # Stop thinking music before speaking
+                response_sentences = []
                 for chunk in self.client.query_stream(transcript):
                     if self._barge_in.is_set():
                         return
@@ -271,8 +281,11 @@ class GordieApp:
                     for sentence in shaped:
                         if self._barge_in.is_set():
                             return
+                        response_sentences.append(sentence)
                         audio_data = self.tts.synthesize(sentence)
                         self.playback.play(audio_data)
+                if self.session_store and self._session_id and response_sentences:
+                    self.session_store.add_message(self._session_id, "gordie", " ".join(response_sentences))
             else:
                 response = self.client.query(transcript)
                 self.metrics.mark("canadagpt_complete")
@@ -280,11 +293,15 @@ class GordieApp:
 
                 self._set_state(State.SPEAKING)
                 self.playback.stop()  # Stop thinking music before speaking
+                response_sentences = []
                 for sentence in shaped_sentences:
                     if self._barge_in.is_set():
                         return
+                    response_sentences.append(sentence)
                     audio_data = self.tts.synthesize(sentence)
                     self.playback.play(audio_data)
+                if self.session_store and self._session_id and response_sentences:
+                    self.session_store.add_message(self._session_id, "gordie", " ".join(response_sentences))
 
             self.metrics.mark("end_to_end")
             self._offer_follow_up()
@@ -357,6 +374,7 @@ class GordieApp:
             # Clear user session so the next person starts fresh
             if self.registration:
                 self.registration.clear_session()
+            self._end_current_session()
             self._set_state(State.IDLE)
             return
 
@@ -419,6 +437,14 @@ class GordieApp:
         # Signal the display to show the recording UI
         if self.persona:
             self.persona.socketio.emit("opinion_voice_record_start", {})
+
+    def _end_current_session(self) -> None:
+        """End the current session and emit QR event."""
+        if self.session_store and self._session_id:
+            self.session_store.end_session(self._session_id)
+            if self.persona:
+                self.persona.emit_session_qr(self._session_id)
+            self._session_id = None
 
     def handle_prompt_query(self, text: str) -> None:
         """Handle a text query from the display's prompt mode."""
