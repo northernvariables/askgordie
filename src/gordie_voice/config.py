@@ -35,8 +35,8 @@ class STTConfig(BaseModel):
 
 
 class TTSConfig(BaseModel):
-    provider: Literal["elevenlabs", "piper", "google_cloud", "resemble", "espeak"] = "elevenlabs"
-    model: str = "en_US-lessac-medium"  # Piper voice model name
+    provider: Literal["elevenlabs", "piper", "google_cloud", "resemble", "espeak"] = "google_cloud"
+    model: str = "Alnilam"  # Google Cloud: Chirp3 HD voice name; Piper: model name
     streaming: bool = True
     chunk_strategy: Literal["sentence", "paragraph"] = "sentence"
 
@@ -97,13 +97,13 @@ class Settings(BaseSettings):
     openai_api_key: str = ""       # For Whisper API fallback STT
     anthropic_api_key: str = ""    # For direct Anthropic API (bypass when CanadaGPT needs session auth)
     resemble_api_key: str = ""     # For Resemble AI voice cloning TTS
-    elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = ""
+    elevenlabs_api_key: str = ""   # Optional — only needed if tts.provider=elevenlabs
+    elevenlabs_voice_id: str = ""  # Optional — only needed if tts.provider=elevenlabs
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""  # For server-side uploads (never expose to client)
     gordie_device_id: str = "gordie-001"
-    active_persona: str = "laurier"  # laurier | pearson | douglas | diefenbaker
+    active_persona: str = "gordie"  # gordie (default) | laurier | pearson | douglas | diefenbaker
     gordie_wake_word: str = "hey_gordie"
     gordie_log_level: str = "INFO"
 

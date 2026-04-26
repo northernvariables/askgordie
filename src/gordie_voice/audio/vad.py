@@ -45,9 +45,9 @@ class VADDetector:
 
     def reset(self) -> None:
         self._audio_buffer.clear()
-        self._speech_detected = False
+        self._speech_started = False  # True once VAD detects actual speech
         self._start_time = time.monotonic()
-        self._last_speech_time = self._start_time  # Prevent immediate silence trigger
+        self._last_speech_time: float = 0.0  # 0 = no speech detected yet
         self._vad_buffer = np.array([], dtype=np.float32)
         if self._model:
             self._model.reset_states()
@@ -56,15 +56,10 @@ class VADDetector:
         """Feed audio frames. Returns VADResult with is_complete=True when utterance ends."""
         import torch
 
-        if not self._speech_detected:
-            self._start_time = time.monotonic()
-            self._speech_detected = True
-
         self._audio_buffer.append(frames)
 
         # Convert to float32 tensor for Silero
         audio_float = frames.astype(np.float32) / 32768.0
-        tensor = torch.from_numpy(audio_float).squeeze()
 
         # Silero VAD requires exactly 512 samples at 16kHz
         # Buffer and process in 512-sample chunks
@@ -82,14 +77,20 @@ class VADDetector:
         now = time.monotonic()
 
         if confidence > 0.5:
+            if not self._speech_started:
+                self._speech_started = True
+                log.debug("vad_speech_started")
             self._last_speech_time = now
 
         elapsed = now - self._start_time
-        silence_duration = (now - self._last_speech_time) * 1000 if self._last_speech_time > 0 else 0
 
-        # End conditions: silence after speech, or max duration
-        if self._last_speech_time > 0 and silence_duration >= self.config.min_silence_ms:
-            return self._finalize()
+        # Only check for silence AFTER we've heard actual speech
+        if self._speech_started and self._last_speech_time > 0:
+            silence_duration = (now - self._last_speech_time) * 1000
+            if silence_duration >= self.config.min_silence_ms:
+                return self._finalize()
+
+        # Max duration safety valve (even if no speech detected)
         if elapsed >= self.config.max_utterance_s:
             log.info("vad_max_duration_reached", duration_s=elapsed)
             return self._finalize()

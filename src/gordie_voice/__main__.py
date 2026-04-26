@@ -39,16 +39,23 @@ def main() -> None:
     wake = create_wake_detector(settings)
     stt = create_stt_provider(settings)
     tts = create_tts_provider(settings)
-    # Persona manager — loads the historical figure for this device
-    from gordie_voice.personas.manager import PersonaManager
-    persona_mgr = PersonaManager(settings)
-    log.info("persona_active", name=persona_mgr.name, slug=persona_mgr.slug)
+    # Persona: only load if explicitly configured (not the default "gordie" mode)
+    persona_mgr = None
+    if settings.active_persona and settings.active_persona != "gordie":
+        from gordie_voice.personas.manager import PersonaManager
+        persona_mgr = PersonaManager(settings)
+        log.info("persona_active", name=persona_mgr.name, slug=persona_mgr.slug)
+    else:
+        log.info("persona_active", name="Gordie", slug="gordie")
 
-    # Use direct Anthropic if we have the key (bypasses CanadaGPT session auth)
+    # Use direct Anthropic for now (CanadaGPT API requires session auth)
+    # TODO: switch to CanadaGPT API once device auth is implemented
     if settings.anthropic_api_key:
         from gordie_voice.canadagpt.direct_anthropic import DirectAnthropicClient
-        system_prompt = persona_mgr.build_system_prompt()
+        system_prompt = persona_mgr.build_system_prompt() if persona_mgr else None
         client = DirectAnthropicClient(settings, system_prompt=system_prompt)
+    elif settings.canadagpt_api_key:
+        client = CanadaGPTClient(settings)
     else:
         client = CanadaGPTClient(settings)
     shaper = ResponseShaper(settings.shaper)
@@ -79,6 +86,15 @@ def main() -> None:
 
     # Register persona change callback — admin can push persona changes via device registry
     def _handle_persona_change(slug: str) -> None:
+        nonlocal persona_mgr
+        if slug == "gordie":
+            persona_mgr = None
+            client.new_conversation()
+            log.info("persona_changed_remotely", slug=slug, name="Gordie")
+            return
+        if persona_mgr is None:
+            from gordie_voice.personas.manager import PersonaManager
+            persona_mgr = PersonaManager(settings)
         if persona_mgr.switch_persona(slug):
             new_prompt = persona_mgr.build_system_prompt()
             if hasattr(client, 'set_system_prompt'):
@@ -144,7 +160,8 @@ def main() -> None:
     if persona:
         persona.set_app(app)
         persona.set_device_registry(device_registry)
-        persona.set_persona_manager(persona_mgr)
+        if persona_mgr:
+            persona.set_persona_manager(persona_mgr)
 
     app.run()
 
