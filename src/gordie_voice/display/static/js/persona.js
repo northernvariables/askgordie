@@ -69,6 +69,15 @@ socket.on('state', (data) => {
     if (!lockMode) {
         setActiveView(mode);
     }
+
+    // Keep QR 10 more seconds when new user starts talking
+    if (state === 'listening' && sessionQr && !sessionQr.classList.contains('hidden')) {
+        if (sessionQrTimeout) clearTimeout(sessionQrTimeout);
+        sessionQrTimeout = setTimeout(() => {
+            sessionQr.classList.add('hidden');
+            sessionQr.classList.remove('fade-in');
+        }, 10000);
+    }
 });
 
 // ---- Prompt submission ----
@@ -936,6 +945,24 @@ socket.on('opinion_voice_record_start', () => {
 
 socket.on('opinion_error', (data) => {
     console.error('Opinion recording error:', data.message);
+});
+
+// ---- Session QR ----
+
+const sessionQr = document.getElementById('session-qr');
+const sessionQrImg = document.getElementById('session-qr-img');
+let sessionQrTimeout = null;
+
+socket.on('session_ended', (data) => {
+    if (!data.session_id || !sessionQr || !sessionQrImg) return;
+    sessionQrImg.src = '/qr/session/' + data.session_id;
+    sessionQr.classList.remove('hidden');
+    sessionQr.classList.add('fade-in');
+    if (sessionQrTimeout) clearTimeout(sessionQrTimeout);
+    sessionQrTimeout = setTimeout(() => {
+        sessionQr.classList.add('hidden');
+        sessionQr.classList.remove('fade-in');
+    }, 30000);
 });
 
 // ---- Connection ----

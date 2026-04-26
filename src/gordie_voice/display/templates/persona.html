@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Gordie — CanadaGPT</title>
     <link rel="stylesheet" href="/static/css/persona.css">
+    <link rel="stylesheet" href="/static/css/badge-pulse.css">
     {% if touch %}<link rel="stylesheet" href="/static/css/touch.css">{% endif %}
 </head>
 <body class="theme-{{ theme }}{% if touch %} touch{% endif %}" data-state="idle" data-mode="voice" data-lock-mode="{{ lock_mode }}">
@@ -12,31 +13,23 @@
     <!-- Voice mode: Gordie's animated face -->
     <div id="voice-view" class="view active">
         <div id="gordie-container">
-            <!-- Tap target: tap Gordie's face to trigger wake (touch alternative) -->
+            <!-- Tap target: tap badge to trigger wake (touch alternative) -->
             <button id="tap-to-wake" aria-label="Tap to ask Gordie a question">
-                <!-- Ambient ring that pulses with state -->
-                <div id="ambient-ring"></div>
+                <!-- Pulse rings (multiple for layered glow effect) -->
+                <div id="pulse-ring-outer"></div>
+                <div id="pulse-ring-inner"></div>
 
-                <!-- The face -->
-                <div id="gordie-face">
-                    <div id="eyes">
-                        <div class="eye left">
-                            <div class="pupil"></div>
-                            <div class="eyelid"></div>
-                        </div>
-                        <div class="eye right">
-                            <div class="pupil"></div>
-                            <div class="eyelid"></div>
-                        </div>
-                    </div>
-                    <div id="mouth">
-                        <div class="mouth-shape"></div>
-                    </div>
-                    <div id="thinking-dots">
-                        <span></span><span></span><span></span>
-                    </div>
+                <!-- The Gordie badge -->
+                <div id="gordie-badge">
+                    <img src="/static/img/gordie-badge.svg" alt="Ask Gordie" draggable="false">
                 </div>
             </button>
+
+            <!-- Session QR — appears after conversation ends -->
+            <div id="session-qr" class="session-qr hidden">
+                <img id="session-qr-img" src="" alt="Scan to save your conversation" width="180" height="180">
+                <p class="session-qr-cta">Scan to save your conversation</p>
+            </div>
 
             <!-- Waveform visualization (visible when listening) -->
             <canvas id="waveform" width="300" height="60"></canvas>
@@ -59,8 +52,7 @@
     <div id="prompt-view" class="view">
         <div id="prompt-header">
             <button id="prompt-gordie-tap" class="gordie-mini" aria-label="Gordie">
-                <div class="mini-eye left"></div>
-                <div class="mini-eye right"></div>
+                <img src="/static/img/gordie-badge.svg" alt="Gordie" width="40" height="40">
             </button>
             <h1>Ask Gordie</h1>
         </div>
