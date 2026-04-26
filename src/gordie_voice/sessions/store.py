@@ -65,7 +65,7 @@ class SessionStore:
         """Return (or create) the per-thread SQLite connection."""
         conn = getattr(self._local, "conn", None)
         if conn is None:
-            conn = sqlite3.connect(self._db_path, check_same_thread=False)
+            conn = sqlite3.connect(self._db_path)
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA foreign_keys=ON")
@@ -122,6 +122,7 @@ class SessionStore:
             """,
             (session_id, role, content, json.dumps(sources or []), self._now()),
         )
+        log.debug("message_added", session_id=session_id, role=role)
 
     def end_session(self, session_id: str) -> None:
         """Mark the session as ended; count user messages as topic_count."""
