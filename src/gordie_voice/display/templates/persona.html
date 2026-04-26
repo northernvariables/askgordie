@@ -51,6 +51,19 @@
         <div id="privacy-notice" class="privacy-notice">
             This conversation is temporarily stored. Scan the QR code to save it, or it will be automatically deleted.
         </div>
+
+        <!-- Keyboard prompt overlay — appears on keypress in voice mode -->
+        <div id="keyboard-prompt" class="keyboard-prompt hidden">
+            <form id="keyboard-form">
+                <input type="text" id="keyboard-input" placeholder="Type your question..."
+                       autocomplete="off" enterkeyhint="send">
+                <button type="submit" aria-label="Send">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Prompt mode: text input + response display -->

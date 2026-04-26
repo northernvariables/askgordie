@@ -447,17 +447,30 @@ class GordieApp:
             self._session_id = None
 
     def handle_prompt_query(self, text: str) -> None:
-        """Handle a text query from the display's prompt mode."""
-        if self._mode != InteractionMode.PROMPT:
-            return
+        """Handle a text query submitted via the keyboard overlay (works in any mode)."""
         try:
+            if self.session_store and not self._session_id:
+                self._session_id = self.session_store.create_session(self.settings.device_id)
+            if self.session_store and self._session_id and text.strip():
+                self.session_store.add_message(self._session_id, "user", text)
+
             self._set_state(State.QUERYING)
+            response_sentences: list[str] = []
+
             if self.settings.canadagpt.streaming:
-                full_response: list[str] = []
+                self._set_state(State.SPEAKING)
                 for chunk in self.client.query_stream(text):
-                    full_response.append(chunk)
+                    if self._barge_in.is_set():
+                        return
                     if self.persona:
                         self.persona.broadcast_response_chunk(chunk)
+                    shaped = self.shaper.shape(chunk)
+                    for sentence in shaped:
+                        if self._barge_in.is_set():
+                            return
+                        response_sentences.append(sentence)
+                        audio_data = self.tts.synthesize(sentence)
+                        self.playback.play(audio_data)
                 if self.persona:
                     self.persona.broadcast_response_done()
             else:
@@ -465,7 +478,20 @@ class GordieApp:
                 if self.persona:
                     self.persona.broadcast_response_chunk(response)
                     self.persona.broadcast_response_done()
-            self._set_state(State.IDLE)
+                shaped_sentences = self.shaper.shape(response)
+                self._set_state(State.SPEAKING)
+                for sentence in shaped_sentences:
+                    if self._barge_in.is_set():
+                        return
+                    response_sentences.append(sentence)
+                    audio_data = self.tts.synthesize(sentence)
+                    self.playback.play(audio_data)
+
+            if self.session_store and self._session_id and response_sentences:
+                self.session_store.add_message(self._session_id, "gordie", " ".join(response_sentences))
+
+            self._offer_follow_up()
+
         except Exception:
             log.exception("prompt_query_error")
             self._set_state(State.ERROR)

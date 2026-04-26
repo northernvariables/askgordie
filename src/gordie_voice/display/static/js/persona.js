@@ -70,6 +70,12 @@ socket.on('state', (data) => {
         setActiveView(mode);
     }
 
+    // Auto-dismiss keyboard overlay when Gordie starts speaking
+    if (data.state === 'speaking' && keyboardPrompt && !keyboardPrompt.classList.contains('hidden')) {
+        keyboardPrompt.classList.add('hidden');
+        keyboardInput.value = '';
+    }
+
     // Keep QR 10 more seconds when new user starts talking
     if (state === 'listening' && sessionQr && !sessionQr.classList.contains('hidden')) {
         if (sessionQrTimeout) clearTimeout(sessionQrTimeout);
@@ -946,6 +952,43 @@ socket.on('opinion_voice_record_start', () => {
 socket.on('opinion_error', (data) => {
     console.error('Opinion recording error:', data.message);
 });
+
+// ---- Keyboard prompt overlay ----
+
+const keyboardPrompt = document.getElementById('keyboard-prompt');
+const keyboardInput = document.getElementById('keyboard-input');
+const keyboardForm = document.getElementById('keyboard-form');
+
+if (keyboardPrompt && keyboardInput && keyboardForm) {
+    document.addEventListener('keydown', (e) => {
+        if (body.dataset.mode !== 'voice') return;
+        if (!keyboardPrompt.classList.contains('hidden')) return;
+        if (e.key === 'Escape' || e.key === 'Tab' || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (e.key.length !== 1) return;
+
+        keyboardPrompt.classList.remove('hidden');
+        keyboardInput.value = e.key;
+        keyboardInput.focus();
+        keyboardInput.setSelectionRange(1, 1);
+        e.preventDefault();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !keyboardPrompt.classList.contains('hidden')) {
+            keyboardPrompt.classList.add('hidden');
+            keyboardInput.value = '';
+        }
+    });
+
+    keyboardForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = keyboardInput.value.trim();
+        if (!text) return;
+        socket.emit('prompt_submit', { text });
+        keyboardInput.value = '';
+        keyboardPrompt.classList.add('hidden');
+    });
+}
 
 // ---- Session QR ----
 
