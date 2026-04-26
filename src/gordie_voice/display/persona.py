@@ -69,6 +69,9 @@ class PersonaServer:
             template_folder=str(TEMPLATE_DIR),
             static_folder=str(STATIC_DIR),
         )
+        # Register custom Jinja2 filter for parsing JSON strings in templates
+        import json as _json
+        self.flask.jinja_env.filters["fromjson"] = lambda s: _json.loads(s) if isinstance(s, str) else s
         self.socketio = SocketIO(self.flask, cors_allowed_origins="*", async_mode="threading")
         self._thread: threading.Thread | None = None
         self._countdown_thread: threading.Thread | None = None
@@ -99,6 +102,12 @@ class PersonaServer:
     def set_fact_checker(self, checker: FactChecker, stt: object) -> None:
         self._fact_checker = checker
         self._stt = stt
+
+    def set_session_store(self, store) -> None:
+        self._session_store = store
+
+    def emit_session_qr(self, session_id: str) -> None:
+        self.socketio.emit("session_ended", {"session_id": session_id})
 
     def _setup_routes(self) -> None:
         from flask import Response, render_template
@@ -198,6 +207,52 @@ class PersonaServer:
                 self._recorder.generate_mjpeg(),
                 mimetype="multipart/x-mixed-replace; boundary=frame",
             )
+
+        @self.flask.route("/s/<session_id>")
+        def session_recap(session_id):
+            if not hasattr(self, '_session_store') or not self._session_store:
+                return "Sessions not available", 503
+            session = self._session_store.get_session(session_id)
+            if not session:
+                return render_template("session.html", deleted=True)
+            messages = self._session_store.get_messages(session_id)
+            self._session_store.mark_scanned(session_id)
+            from datetime import datetime
+            started = datetime.fromisoformat(session["started_at"])
+            ended = datetime.fromisoformat(session["ended_at"]) if session["ended_at"] else datetime.utcnow()
+            duration_min = max(1, round((ended - started).total_seconds() / 60))
+            riding_name = None
+            if self._device_registry and hasattr(self._device_registry, 'riding_name'):
+                riding_name = self._device_registry.riding_name
+            return render_template(
+                "session.html",
+                session=session,
+                messages=messages,
+                duration_min=duration_min,
+                riding_name=riding_name,
+            )
+
+        @self.flask.route("/s/<session_id>/delete", methods=["POST"])
+        def session_delete(session_id):
+            if hasattr(self, '_session_store') and self._session_store:
+                self._session_store.delete_session(session_id)
+            return render_template("session.html", deleted=True)
+
+        @self.flask.route("/qr/session/<session_id>")
+        def qr_session(session_id):
+            import io
+            import qrcode
+            host = _get_lan_ip()
+            port = self.config.port
+            url = f"http://{host}:{port}/s/{session_id}"
+            qr = qrcode.QRCode(version=1, box_size=10, border=2)
+            qr.add_data(url)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="#EC2024", back_color="#0a0a0f")
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            return Response(buf.getvalue(), mimetype="image/png")
 
     def _setup_socket_handlers(self) -> None:
         import random
