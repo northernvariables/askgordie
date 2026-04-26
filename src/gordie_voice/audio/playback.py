@@ -44,6 +44,12 @@ class AudioPlayback:
         except Exception:
             log.exception("playback_error")
 
+    def play_background(self, audio_data: bytes | np.ndarray, sample_rate: int | None = None) -> None:
+        """Play audio in a background thread. Call stop() to interrupt."""
+        self._stop_event.clear()
+        t = threading.Thread(target=self.play, args=(audio_data, sample_rate), daemon=True)
+        t.start()
+
     def stop(self) -> None:
         """Signal to stop current playback (barge-in support)."""
         self._stop_event.set()

@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from gordie_voice.audio.tones import listening_chime, thinking_tone, get_tone_sample_rate
+
 if TYPE_CHECKING:
     from gordie_voice.audio.capture import AudioCapture
     from gordie_voice.audio.playback import AudioPlayback
@@ -178,6 +180,8 @@ class GordieApp:
                 self.metrics.start_interaction()
                 self.metrics.mark("wake_detection")
                 self._barge_in.clear()
+                # Play listening chime so user knows they were heard
+                self.playback.play(listening_chime(), sample_rate=get_tone_sample_rate())
                 self.vad.reset()
                 self._set_state(State.LISTENING)
 
@@ -190,6 +194,9 @@ class GordieApp:
                 self.metrics.mark("vad_end_of_speech")
                 # Stop capture during processing to prevent feedback loop
                 self.capture.stop()
+                # Play thinking music in background so user knows we're processing
+                if result.audio:
+                    self.playback.play_background(thinking_tone(), sample_rate=get_tone_sample_rate())
                 self._set_state(State.TRANSCRIBING)
                 self._transcribe_and_respond(result.audio, is_follow_up=self._awaiting_follow_up)
                 # Resume capture after response
@@ -241,11 +248,13 @@ class GordieApp:
             log.info("transcription", text=transcript)
 
             if not transcript.strip():
+                self.playback.stop()  # Stop thinking music
                 self._set_state(State.IDLE)
                 return
 
             # If this came after a follow-up prompt, route through intent detection
             if is_follow_up:
+                self.playback.stop()  # Stop thinking music
                 self._handle_follow_up_intent(transcript)
                 return
 
@@ -254,6 +263,7 @@ class GordieApp:
 
             if self.settings.canadagpt.streaming:
                 self._set_state(State.SPEAKING)
+                self.playback.stop()  # Stop thinking music before speaking
                 for chunk in self.client.query_stream(transcript):
                     if self._barge_in.is_set():
                         return
@@ -269,6 +279,7 @@ class GordieApp:
                 shaped_sentences = self.shaper.shape(response)
 
                 self._set_state(State.SPEAKING)
+                self.playback.stop()  # Stop thinking music before speaking
                 for sentence in shaped_sentences:
                     if self._barge_in.is_set():
                         return
@@ -309,9 +320,13 @@ class GordieApp:
 
     def _handle_follow_up_intent(self, transcript: str) -> None:
         """Route follow-up transcript: new question, record opinion, or done."""
-        lower = transcript.lower().strip()
+        import re
 
-        # Check for opinion recording intent
+        lower = transcript.lower().strip()
+        # Split into words for whole-word matching
+        words = set(re.findall(r"[a-z']+", lower))
+
+        # Check for opinion recording intent (substring match is fine — these are specific)
         record_phrases = [
             "record my opinion", "record opinion", "share my opinion",
             "record my thoughts", "i want to record", "let me record",
@@ -322,12 +337,17 @@ class GordieApp:
             self._initiate_voice_recording()
             return
 
-        # Check for "done" / "no" / "that's all" intent
+        # Check for "done" intent — short responses that clearly mean "stop"
+        # Use whole-word matching to avoid false positives like "know" matching "no"
+        done_exact = {"no", "nope", "nothing", "goodbye", "bye"}
         done_phrases = [
-            "no", "nope", "that's all", "that is all", "i'm good",
-            "i'm done", "nothing", "no thanks", "no thank you", "goodbye",
+            "that's all", "that is all", "i'm good", "i'm done",
+            "no thanks", "no thank you", "thank you", "thanks",
         ]
-        if any(phrase in lower for phrase in done_phrases):
+        is_done = bool(words & done_exact and len(words) <= 3) or any(
+            phrase in lower for phrase in done_phrases
+        )
+        if is_done:
             log.info("follow_up_intent", intent="done")
             try:
                 goodbye_audio = self.tts.synthesize("Thanks for using Gordie. I'll be here if you need me.")

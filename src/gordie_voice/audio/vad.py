@@ -90,6 +90,12 @@ class VADDetector:
             if silence_duration >= self.config.min_silence_ms:
                 return self._finalize()
 
+        # No speech timeout — if nobody speaks within 5s of listening, give up
+        if not self._speech_started and elapsed >= 5.0:
+            log.info("vad_no_speech_timeout", elapsed_s=round(elapsed, 1))
+            self.reset()
+            return VADResult(is_complete=True, audio=b"")
+
         # Max duration safety valve (even if no speech detected)
         if elapsed >= self.config.max_utterance_s:
             log.info("vad_max_duration_reached", duration_s=elapsed)
