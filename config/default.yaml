@@ -57,7 +57,7 @@ display:
   port: 8080
   fullscreen: true
   theme: canadian          # canadian | dark | light
-  dual_display: false      # enable two-display mode
+  dual_display: true       # enable two-display mode
   primary_mode: voice      # what the primary display shows: voice | prompt
   secondary_mode: prompt   # what the secondary display shows: voice | prompt
   touch_enabled: true      # touch-friendly UI with larger targets, on-screen inputs
