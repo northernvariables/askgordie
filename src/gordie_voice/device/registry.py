@@ -4,12 +4,13 @@ Lifecycle:
 1. First boot: device generates an activation code, registers as 'pending' in Supabase
 2. Admin enters the code in the CanadaGPT admin panel → status becomes 'activated'
 3. Device polls for activation, receives its API key
-4. Device stores API key locally in /opt/gordie-voice/.device_key
+4. Device stores API key locally in $GORDIE_ROOT/.device_key
 5. Ongoing: periodic heartbeats, config sync, riding resolution
 """
 
 from __future__ import annotations
 
+import os
 import platform
 import time
 import threading
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger()
 
-DEVICE_KEY_PATH = Path("/opt/gordie-voice/.device_key")
+DEVICE_KEY_PATH = Path(os.environ.get("GORDIE_ROOT", "/opt/gordie-voice")) / ".device_key"
 HEARTBEAT_INTERVAL_S = 60
 
 

@@ -12,19 +12,43 @@ log = structlog.get_logger()
 
 
 def get_hardware_serial() -> str:
-    """Read the Raspberry Pi's unique hardware serial from /proc/cpuinfo."""
+    """Read a stable hardware identifier for this device.
+
+    Tries (in order): Raspberry Pi /proc/cpuinfo serial, macOS IOPlatformUUID,
+    Linux /etc/machine-id.
+    """
+    import platform as _platform
+    import subprocess as _subprocess
+
+    # Raspberry Pi: /proc/cpuinfo serial
     try:
         cpuinfo = Path("/proc/cpuinfo").read_text()
         for line in cpuinfo.splitlines():
             if line.startswith("Serial"):
                 return line.split(":")[1].strip()
     except Exception:
-        log.warning("hardware_serial_unavailable")
-    # Fallback: hash the machine-id
+        pass
+
+    # macOS: IOPlatformUUID (stable across reboots)
+    if _platform.system() == "Darwin":
+        try:
+            out = _subprocess.check_output(
+                ["ioreg", "-d2", "-c", "IOPlatformExpertDevice"],
+                text=True,
+            )
+            for line in out.splitlines():
+                if "IOPlatformUUID" in line:
+                    uuid_str = line.split('"')[-2]
+                    return hashlib.sha256(uuid_str.encode()).hexdigest()[:16]
+        except Exception:
+            pass
+
+    # Linux fallback: machine-id
     try:
         machine_id = Path("/etc/machine-id").read_text().strip()
         return hashlib.sha256(machine_id.encode()).hexdigest()[:16]
     except Exception:
+        log.warning("hardware_serial_unavailable")
         return "unknown"
 
 

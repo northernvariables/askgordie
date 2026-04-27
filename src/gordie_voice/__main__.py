@@ -110,8 +110,9 @@ def main() -> None:
     # Session storage
     from gordie_voice.sessions.store import SessionStore
     import os
-    os.makedirs("/opt/gordie-voice/data", exist_ok=True)
-    session_store = SessionStore()
+    gordie_root = os.environ.get("GORDIE_ROOT", "/opt/gordie-voice")
+    os.makedirs(f"{gordie_root}/data", exist_ok=True)
+    session_store = SessionStore(db_path=f"{gordie_root}/data/sessions.db")
 
     if not device_registry.is_activated:
         log.info(

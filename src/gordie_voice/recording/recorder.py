@@ -10,6 +10,7 @@ All recordings stay on-device in /opt/gordie-voice/recordings/.
 from __future__ import annotations
 
 import io
+import os
 import subprocess
 import threading
 import time
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger()
 
-RECORDINGS_DIR = Path("/opt/gordie-voice/recordings")
+RECORDINGS_DIR = Path(os.environ.get("GORDIE_ROOT", "/opt/gordie-voice")) / "recordings"
 FRAME_RATE = 24
 AUDIO_SAMPLE_RATE = 16000
 

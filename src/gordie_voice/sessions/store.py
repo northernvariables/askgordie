@@ -1,17 +1,19 @@
 """Thread-safe SQLite session store for Gordie voice kiosk conversations."""
 
 import json
+import os
 import sqlite3
 import threading
 import uuid
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 import structlog
 
 log = structlog.get_logger(__name__)
 
-_DEFAULT_DB_PATH = "/opt/gordie-voice/data/sessions.db"
+_DEFAULT_DB_PATH = str(Path(os.environ.get("GORDIE_ROOT", "/opt/gordie-voice")) / "data" / "sessions.db")
 
 _SCHEMA_SQL = """
 PRAGMA journal_mode=WAL;
