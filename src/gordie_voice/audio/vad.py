@@ -104,7 +104,10 @@ class VADDetector:
         return VADResult(is_complete=False)
 
     def _finalize(self) -> VADResult:
-        audio = np.concatenate(self._audio_buffer)
-        audio_bytes = audio.tobytes()
+        if not self._audio_buffer:
+            audio_bytes = b""
+        else:
+            audio = np.concatenate(self._audio_buffer)
+            audio_bytes = audio.tobytes()
         self.reset()
         return VADResult(is_complete=True, audio=audio_bytes)

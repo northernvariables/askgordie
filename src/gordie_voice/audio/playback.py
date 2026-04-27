@@ -35,7 +35,8 @@ class AudioPlayback:
         try:
             sd.play(audio_array, samplerate=sr, device=self.config.output_device)
             # Poll for completion so we can honor barge-in
-            while sd.get_stream().active:
+            stream = sd.get_stream()
+            while stream and stream.active:
                 if self._stop_event.is_set():
                     sd.stop()
                     log.info("playback_interrupted")

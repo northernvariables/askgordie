@@ -52,7 +52,7 @@ def _marimba_bar(freq: float, duration_s: float, volume: float = 0.068) -> np.nd
     a = min(int(TONE_SAMPLE_RATE * 0.002), n)
     signal[:a] *= np.linspace(0, 1, a)
     signal = signal / (np.max(np.abs(signal)) + 1e-10) * volume
-    return (signal * 32767).astype(np.float64)
+    return (signal * 32767).astype(np.int16)
 
 
 def _brush_hit(volume: float = 0.025) -> np.ndarray:

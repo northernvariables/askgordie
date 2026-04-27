@@ -12,6 +12,7 @@ Also serves the opinion recorder: MJPEG camera preview + recording controls.
 from __future__ import annotations
 
 import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -682,7 +683,7 @@ class PersonaServer:
                     "correction": claim.correction,
                     "sources": claim.sources,
                 })
-                self.socketio.sleep(0.5)  # Brief pause between claims for visual effect
+                time.sleep(0.5)  # Brief pause between claims for visual effect
 
             # Final verdict
             self.socketio.emit("fact_check_complete", {
@@ -739,7 +740,7 @@ class PersonaServer:
                         daemon=True,
                     ).start()
                 break
-            self.socketio.sleep(1)
+            time.sleep(1)
 
     def _broadcast_queue_status(self) -> None:
         """Send queue status to all connected clients."""
