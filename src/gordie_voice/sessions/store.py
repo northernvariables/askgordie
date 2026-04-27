@@ -55,6 +55,8 @@ class SessionStore:
     def __init__(self, db_path: str = _DEFAULT_DB_PATH) -> None:
         self._db_path = db_path
         self._local = threading.local()
+        self._all_connections: list[sqlite3.Connection] = []
+        self._conn_lock = threading.Lock()
         # Initialise schema on the calling thread's connection.
         self._init_schema()
         log.info("session_store.ready", db_path=db_path)
@@ -72,6 +74,8 @@ class SessionStore:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA foreign_keys=ON")
             self._local.conn = conn
+            with self._conn_lock:
+                self._all_connections.append(conn)
         return conn
 
     def _init_schema(self) -> None:
@@ -212,3 +216,14 @@ class SessionStore:
         if conn is not None:
             conn.close()
             self._local.conn = None
+
+    def close_all(self) -> None:
+        """Close all per-thread connections. Call on shutdown."""
+        with self._conn_lock:
+            for conn in self._all_connections:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            self._all_connections.clear()
+        self._local.conn = None

@@ -105,6 +105,11 @@ class DeviceRegistry:
 
     def stop(self) -> None:
         self._running = False
+        # Close the HTTP client to unblock any in-flight request
+        try:
+            self._client.close()
+        except Exception:
+            pass
         if self._thread:
             self._thread.join(timeout=5)
 

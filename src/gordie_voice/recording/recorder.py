@@ -128,10 +128,15 @@ class OpinionRecorder:
 
     def stop_recording(self) -> str | None:
         """Stop recording and mux video+audio to MP4. Returns file path."""
-        if not self._recording:
-            return None
+        with self._lock:
+            if not self._recording:
+                return None
+            self._recording = False
 
-        self._recording = False
+        return self._finalize_recording()
+
+    def _finalize_recording(self) -> str | None:
+        """Join audio thread and mux to file. Safe to call once after _recording is set False."""
         if self._record_thread:
             self._record_thread.join(timeout=3)
 
@@ -179,9 +184,13 @@ class OpinionRecorder:
                 self._draw_recording_overlay(frame, remaining)
                 self._video_frames.append(frame.copy())
 
-                # Auto-stop at 60s
+                # Auto-stop when time runs out — set flag under lock to
+                # prevent racing with a simultaneous stop_recording() call
                 if remaining <= 0:
-                    threading.Thread(target=self.stop_recording, daemon=True).start()
+                    with self._lock:
+                        if self._recording:
+                            self._recording = False
+                    threading.Thread(target=self._finalize_recording, daemon=True).start()
 
             # Encode to JPEG for MJPEG stream
             _, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])

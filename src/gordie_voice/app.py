@@ -160,6 +160,8 @@ class GordieApp:
             self.presence.stop()
         if self.persona:
             self.persona.stop()
+        if self.session_store:
+            self.session_store.close_all()
         log.info("gordie_stopped")
 
     def _check_presence(self) -> None:
